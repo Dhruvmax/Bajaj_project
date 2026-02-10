@@ -127,12 +127,38 @@ app.post('/bfhl', async (req, res) => {
                     throw err;
                 }
 
-                // Gemini Integration 
-                const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-                // Strict instruction for single word response
-                const aiResult = await model.generateContent(`${prompt} Answer in exactly one single word. do not use punctuation.`);
-                const response = await aiResult.response;
-                resultData = response.text().trim().split(' ')[0]; // Ensure single word
+                try {
+                    // Gemini Integration 
+                    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+                    // Strict instruction for single word response
+                    const aiResult = await model.generateContent(`${prompt} Answer in exactly one single word. do not use punctuation.`);
+                    const response = await aiResult.response;
+                    resultData = response.text().trim().split(' ')[0]; // Ensure single word
+                } catch (geminiError) {
+                    console.error("Gemini Error:", geminiError.message);
+
+                    // Fallback to OpenAI
+                    if (process.env.OPEN_AI_KEY) {
+                        try {
+                            const OpenAI = require('openai');
+                            const openai = new OpenAI({ apiKey: process.env.OPEN_AI_KEY });
+                            const completion = await openai.chat.completions.create({
+                                messages: [{ role: "user", content: `${prompt} Answer in exactly one single word. do not use punctuation.` }],
+                                model: "gpt-3.5-turbo",
+                            });
+                            resultData = completion.choices[0].message.content.trim().split(' ')[0];
+                        } catch (openaiError) {
+                            console.error("OpenAI Error:", openaiError.message);
+                            const err = new Error("AI service unavailable: Both Gemini and OpenAI failed.");
+                            err.statusCode = 500;
+                            throw err;
+                        }
+                    } else {
+                        const err = new Error("AI service unavailable: Gemini failed and OpenAI key missing.");
+                        err.statusCode = 500;
+                        throw err;
+                    }
+                }
                 break;
         }
 
