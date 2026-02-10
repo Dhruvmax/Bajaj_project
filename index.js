@@ -46,69 +46,87 @@ const lcm = (a, b) => (a * b) / gcd(a, b);
 
 // --- ROUTES ---
 
-// GET /health [cite: 23]
+// GET /health
 app.get('/health', (req, res) => {
     res.status(200).json({
         "is_success": true,
         "official_email": EMAIL
-    }); // [cite: 94-98]
+    });
 });
 
-// POST /bfhl [cite: 22]
+// POST /bfhl
 app.post('/bfhl', async (req, res) => {
     try {
         const body = req.body;
         const keys = Object.keys(body);
-        
-        // Validation: Ensure exactly one functional key exists [cite: 32]
+
+        // Validation: Ensure exactly one functional key exists
         const validKeys = ['fibonacci', 'prime', 'lcm', 'hcf', 'AI'];
         const requestKey = keys.find(k => validKeys.includes(k));
 
         if (!requestKey || keys.length !== 1) {
-             return res.status(400).json({
-                "is_success": false,
-                "official_email": EMAIL,
-                "message": "Request must contain exactly one valid key: fibonacci, prime, lcm, hcf, or AI."
-            }); // 
+            const error = new Error("Request must contain exactly one valid key: fibonacci, prime, lcm, hcf, or AI.");
+            error.statusCode = 400;
+            throw error;
         }
 
         let resultData;
 
-        // Logic Mapping [cite: 33, 34]
+        // Logic Mapping
         switch (requestKey) {
             case 'fibonacci':
                 // Expecting Integer -> Returns Series
                 const n = body.fibonacci;
-                if (!Number.isInteger(n)) throw new Error("fibonacci input must be an integer");
+                if (!Number.isInteger(n)) {
+                    const err = new Error("fibonacci input must be an integer");
+                    err.statusCode = 400;
+                    throw err;
+                }
                 resultData = getFibonacci(n);
                 break;
 
             case 'prime':
                 // Expecting Array -> Returns Primes
                 const pArr = body.prime;
-                if (!Array.isArray(pArr)) throw new Error("prime input must be an array");
+                if (!Array.isArray(pArr)) {
+                    const err = new Error("prime input must be an array");
+                    err.statusCode = 400;
+                    throw err;
+                }
                 resultData = pArr.filter(num => Number.isInteger(num) && isPrime(num));
                 break;
 
             case 'lcm':
                 // Expecting Array -> Returns LCM value
                 const lArr = body.lcm;
-                if (!Array.isArray(lArr) || lArr.length === 0) throw new Error("lcm input must be a non-empty array");
+                if (!Array.isArray(lArr) || lArr.length === 0) {
+                    const err = new Error("lcm input must be a non-empty array");
+                    err.statusCode = 400;
+                    throw err;
+                }
                 resultData = lArr.reduce((acc, curr) => lcm(acc, curr));
                 break;
 
             case 'hcf':
                 // Expecting Array -> Returns HCF value
                 const hArr = body.hcf;
-                if (!Array.isArray(hArr) || hArr.length === 0) throw new Error("hcf input must be a non-empty array");
+                if (!Array.isArray(hArr) || hArr.length === 0) {
+                    const err = new Error("hcf input must be a non-empty array");
+                    err.statusCode = 400;
+                    throw err;
+                }
                 resultData = hArr.reduce((acc, curr) => gcd(acc, curr));
                 break;
 
             case 'AI':
                 // Expecting String -> Returns Single-word AI response 
                 const prompt = body.AI;
-                if (typeof prompt !== 'string') throw new Error("AI input must be a string");
-                
+                if (typeof prompt !== 'string') {
+                    const err = new Error("AI input must be a string");
+                    err.statusCode = 400;
+                    throw err;
+                }
+
                 // Gemini Integration 
                 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
                 // Strict instruction for single word response
@@ -118,7 +136,7 @@ app.post('/bfhl', async (req, res) => {
                 break;
         }
 
-        // Success Response [cite: 36-41]
+        // Success Response
         res.status(200).json({
             "is_success": true,
             "official_email": EMAIL,
@@ -128,7 +146,7 @@ app.post('/bfhl', async (req, res) => {
     } catch (error) {
         // Graceful error handling 
         console.error("Error processing request:", error);
-        res.status(500).json({
+        res.status(error.statusCode || 500).json({
             "is_success": false,
             "official_email": EMAIL,
             "message": error.message || "Internal Server Error"
