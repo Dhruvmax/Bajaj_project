@@ -129,7 +129,7 @@ app.post('/bfhl', async (req, res) => {
 
                 try {
                     // Gemini Integration 
-                    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+                    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
                     // Strict instruction for single word response
                     const aiResult = await model.generateContent(`${prompt} Answer in exactly one single word. do not use punctuation.`);
                     const response = await aiResult.response;
